@@ -89,9 +89,9 @@ class Noclip {
     public saveCamera() {
         const pos = natives.getCamCoord(this.camera);
         const rot = natives.getCamRot(this.camera, 2);
-        const fov = natives.getGameplayCamFov();
+        const fov = natives.getCamFov(this.camera);
 
-        if (this.cameraList.length > 10) return;
+        if (this.cameraList.length >= 10) return;
 
         const data: ICameraElement = {
             coords: pos,
