@@ -42,6 +42,16 @@ interface ICameraElement {
     fov: number
 }
 
+interface ICameraData {
+    Coords: {
+        X: number,
+        Y: number,
+        Z: number,
+    },
+    RotationZ: number,
+    Fov: number
+}
+
 class Noclip {
     private sensitivity = 0.15;
     private sensMultiplier = 5;
@@ -66,6 +76,24 @@ class Noclip {
 
         natives.setEntityInvincible(alt.Player.local.scriptID, true);
         natives.freezeEntityPosition(alt.Player.local.scriptID, true);
+
+        alt.emitServer('noclip:cameras:get');
+        alt.onServer('server:noclip:cameras:set', (data: string) => {
+            alt.log(data);
+            const camerasData: Array<object> = JSON.parse(data);
+            alt.log(camerasData);
+
+            for (let i = 0; i < camerasData.length - 1; i++) {
+                let camera = camerasData[i];
+                let fixedCamera: ICameraData = camera as unknown as ICameraData;
+                const serializedCamera: ICameraElement = {
+                    coords: new alt.Vector3(fixedCamera.Coords.X, fixedCamera.Coords.Y, fixedCamera.Coords.Z),
+                    rotation: new alt.Vector3(0, 0, fixedCamera.RotationZ),
+                    fov: fixedCamera.Fov
+                }
+                this.cameraList.push(serializedCamera);
+            }
+        });
 
         this.initTick();
     }
@@ -101,6 +129,13 @@ class Noclip {
 
         this.cameraList.push(data);
 
+        const finalData = {
+            coords: pos,
+            rotationZ: rot.z,
+            fov
+        };
+
+        alt.emitServer('noclip:camera:save', JSON.stringify(finalData));
         alt.log('Saved point');
     }
 
@@ -239,7 +274,11 @@ class Noclip {
 
         if (Date.now() > nextUpdate) {
             nextUpdate = Date.now() + timeBetweenPlayerUpdates;
-            alt.emitServer('noclip:pos:set', fwd.x, fwd.y, fwd.z);
+
+            const data = {
+                position: new alt.Vector3(fwd.x, fwd.y, fwd.z),
+            };
+            alt.emitServer('noclip:pos:set', JSON.stringify(data));
         }
 
         if (!natives.isPauseMenuActive()) this.processCameraRotation();
